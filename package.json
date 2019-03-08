@@ -1,0 +1,39 @@
+{
+  "name": "json-database",
+  "version": "1.0.0",
+  "description": "An easy way to create JSON database files.",
+  "main": "index.js",
+  "dependencies": {
+    "chalk": "2.4.2",
+    "commander": "2.19.0"
+  },
+  "devDependencies": {
+    "eslint": "5.15.1",
+    "eslint-config-airbnb-base": "13.1.0",
+    "eslint-plugin-import": "2.16.0",
+    "jest": "24.3.1"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/foo-dogsquared/json-database.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/foo-dogsquared/json-database/issues"
+  },
+  "homepage": "https://github.com/foo-dogsquared/json-database#readme",
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint lint",
+      "git add"
+    ]
+  }
+}
