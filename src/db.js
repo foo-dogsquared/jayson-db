@@ -1,6 +1,6 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
 
 class DBError extends Error {
   constructor(statusCode, description = statusCode) {
@@ -12,12 +12,13 @@ class DBError extends Error {
 }
 
 const ErrorList = {
-  invalidKey: new DBError(1, 'Invalid key'),
-  keyAlreadyExists: new DBError(2, 'Key already exists'),
-  keyNotFound: new DBError(3, 'Given key does not exist in the database'),
-  invalidFile: new DBError(100, 'Database file is not valid'),
-  invalidJson: new DBError(101, 'Invalid JSON from parsing'),
-  invalidTypePath: new DBError(102, 'Invalid type of the path (it should be a string)')
+  invalidKey: new DBError(1, "Invalid key"),
+  keyAlreadyExists: new DBError(2, "Key already exists"),
+  keyNotFound: new DBError(3, "Given key does not exist in the database"),
+  invalidTypeName: new DBError(50, "Invalid type of the name (it should be a string)"),
+  invalidFile: new DBError(100, "Database file is not valid"),
+  invalidJson: new DBError(101, "Invalid JSON from parsing"),
+  invalidTypePath: new DBError(102, "Invalid type of the path (it should be a string)")
 };
 
 class DB {
@@ -30,10 +31,11 @@ class DB {
   * @param data {Object} - the data to be associated with the database
   */
   constructor(name, filePath = __dirname, data = {}) {
+    if (typeof name !== "string") throw ErrorList.invalidTypeName;
     this.name = name;
 
-    if (typeof filePath !== 'string') throw ErrorList.invalidTypePath
-    this.path = filePath;
+    if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
+    this.path = path.resolve(filePath);
     this.objects = data;
   }
 
@@ -48,7 +50,7 @@ class DB {
   * @error code: 2 if the key is detected in the database
   */
   create(key, value) {
-    if (!key) throw ErrorList.invalidKey;
+    if (!key || typeof key !== "string") throw ErrorList.invalidKey;
     if (key in this.objects) throw ErrorList.keyAlreadyExists;
     this.objects[key] = value;
     return this.objects[key];
@@ -98,17 +100,17 @@ class DB {
     return deletedValue;
   }
 
+  get fullFilePath() {
+    return path.resolve(this.path, `${this.name}.json`);
+  }
+
   // static methods of the database class
   export() {
-    const dest = path.join(__dirname, this.path);
-    const fullFilePath = `${dest + this.name}.json`;
-    fs.writeFileSync(fullFilePath, JSON.stringify(this.objects), { encoding: 'utf8' });
+    fs.writeFileSync(this.fullFilePath, JSON.stringify(this.objects), { encoding: "utf8" });
   }
 
   clear() {
-    const dest = path.join(__dirname, this.path);
-    const fullFilePath = `${dest + this.name}.json`;
-    fs.writeFileSync(fullFilePath, '', { encoding: 'utf8' })
+    fs.writeFileSync(this.fullFilePath, "", { encoding: "utf8" })
   }
 
   /*
@@ -121,7 +123,7 @@ class DB {
   * @error code: 102 if the given path is not a string
   */
   static getDB(filePath) {
-    if (typeof filePath !== 'string') throw ErrorList.invalidTypePath;
+    if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
 
     const dest = path.join(__dirname, filePath);
     const fileExtension = path.extname(dest);
@@ -129,12 +131,12 @@ class DB {
     if (fileExtension.toLowerCase() !== ".json") throw ErrorList.invalidFile;
 
     // setting the database object now
-    const rawJsonData = fs.readFileSync(dest, 'utf8');
+    const rawJsonData = fs.readFileSync(dest, "utf8");
     try {
       const databaseData = JSON.parse(rawJsonData);
-      return new DB(filePath, path.basename(dest, '.json'), databaseData);
+      return new DB(filePath, path.basename(dest, ".json"), databaseData);
     } catch (error) {
-      throw ErrorList.invalidJson;
+      throw error;
     }
   }
 }
