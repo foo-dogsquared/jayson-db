@@ -30,12 +30,14 @@ class DB {
   * @param filePath {String} - the location of the database file (or the export path if it doesn't exist yet)
   * @param data {Object} - the data to be associated with the database
   */
-  constructor(name, filePath = __dirname, data = {}) {
+  constructor(name, filePath = "./", data = {}) {
     if (typeof name !== "string") throw ErrorList.invalidTypeName;
     this.name = name;
 
     if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
     this.path = path.resolve(filePath);
+
+    if (typeof data !== "object" && (data instanceof Array || data instanceof Object)) throw ErrorList.invalidJson;
     this.objects = data;
   }
 
@@ -104,13 +106,14 @@ class DB {
     return path.resolve(this.path, `${this.name}.json`);
   }
 
-  // static methods of the database class
+  // standard methods of the database instance
   export() {
     fs.writeFileSync(this.fullFilePath, JSON.stringify(this.objects), { encoding: "utf8" });
   }
 
-  clear() {
-    fs.writeFileSync(this.fullFilePath, "", { encoding: "utf8" })
+  clear(deleteJSON = true) {
+    if (Boolean(deleteJSON)) fs.unlinkSync(this.fullFilePath);
+    else fs.writeFileSync(this.fullFilePath, "", { encoding: "utf8" })
   }
 
   /*
@@ -125,7 +128,7 @@ class DB {
   static getDB(filePath) {
     if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
 
-    const dest = path.join(__dirname, filePath);
+    const dest = path.resolve(filePath);
     const fileExtension = path.extname(dest);
 
     if (fileExtension.toLowerCase() !== ".json") throw ErrorList.invalidFile;
@@ -134,7 +137,7 @@ class DB {
     const rawJsonData = fs.readFileSync(dest, "utf8");
     try {
       const databaseData = JSON.parse(rawJsonData);
-      return new DB(filePath, path.basename(dest, ".json"), databaseData);
+      return new DB(path.basename(dest, ".json"), path.dirname(filePath), databaseData);
     } catch (error) {
       throw error;
     }
