@@ -1,40 +1,38 @@
 #!/usr/bin/env node
-const db = require('./src/db');
 const repl = require('repl');
-const fs = require('fs');
 
 const program = require('commander');
-const packageJSON = JSON.parse(fs.readFileSync('package.json'));
+const db = require('./src/db');
 
 // CLI tool program
 program
-  .version(packageJSON.version, '-v, --version')
+  .version('0.0.1', '-v, --version');
 
 // 'create' function of the CLI tool
 program
   .command('create <name>')
-  .description('Create an instance of the database with the name and enter to a Node REPL with the database instance')
+  .description('Create an instance of the database and enter to a Node REPL with the database instance')
   .option('-p, --path [filePath]', 'The output path of the JSON to be exported', './')
-  .action(function (name, options) {
+  .action((name, options) => {
     const dbInstance = new db.DB(name, options.path);
     const replServer = repl.start({
-      prompt: `JSON-DB (${name}): `
-    })
+      prompt: `jayson-db (${name}): `,
+    });
 
     replServer.context.db = dbInstance;
-  })
+  });
 
 // 'repl' function of the CLI tool
 program
   .command('repl')
   .description('Enter a Node REPL to test out the database library')
-  .action(function () {
+  .action(() => {
     const replServer = repl.start({
-      prompt: `JSON-DB REPL: `
-    })
+      prompt: 'jayson-db REPL: ',
+    });
 
-    replServer.context.DB = db.DB
-  })
+    replServer.context.DB = db.DB;
+  });
 
 program.parse(process.argv);
 
