@@ -1,6 +1,9 @@
+const events = require('events');
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const schema = require("./schema");
+const helpers = require('./helpers');
 
 class DBError extends Error {
   constructor(statusCode, description = statusCode) {
@@ -11,14 +14,25 @@ class DBError extends Error {
   }
 }
 
+/*
+* There's two DB events so far:
+* @create - emitted when a new value in the data object was added
+* @delete - emitted when there is a key to be deleted
+*/
+class DBEvent extends events {}
+
+const DBEventEmitter = new DBEvent();
+
 const ErrorList = {
   invalidKey: new DBError(1, "Invalid key"),
   keyAlreadyExists: new DBError(2, "Key already exists"),
   keyNotFound: new DBError(3, "Given key does not exist in the database"),
+  invalidSchema: new DBError(4, "Invalid schema is given"),
+  schemaMismatch: new DBError(5, "There's a schema present. Use Schema.add() function instead or force it"),
   invalidTypeName: new DBError(50, "Invalid type of the name (it should be a string)"),
   invalidFile: new DBError(100, "Database file is not valid"),
   invalidJson: new DBError(101, "Invalid JSON from parsing"),
-  invalidTypePath: new DBError(102, "Invalid type of the path (it should be a string)")
+  invalidTypePath: new DBError(102, "Invalid type of the path (it should be a string)"),
 };
 
 class DB {
@@ -30,15 +44,30 @@ class DB {
   * @param filePath {String} - the location of the database file (or the export path if it doesn't exist yet)
   * @param data {Object} - the data to be associated with the database
   */
-  constructor(name, filePath = "./", data = {}) {
+  constructor(name, filePath = "./", schemaObject = null, databaseData = null) {
+    // checking if given name is a string
     if (typeof name !== "string") throw ErrorList.invalidTypeName;
     this.name = name;
 
+    // checking if file path is a string
     if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
     this.path = path.resolve(filePath);
 
-    if (typeof data !== "object" && (data instanceof Array || data instanceof Object)) throw ErrorList.invalidJson;
-    this.objects = data;
+    // checking for the schema and the resulting data
+    if (typeof schemaObject === 'object' && schemaObject !== null) {
+        this.schema = new schema.Schema(schemaObject);
+        this.data = this.schema.data;
+        this.create = this.schema.add.bind(this.schema);
+        this.delete = this.schema.delete.bind(this.schema);
+
+        if (databaseData !== null && databaseData instanceof Array) {
+          for (const record of databaseData) { this.create(record); }
+        }
+    }
+    else if (databaseData !== null && typeof databaseData === 'object' && databaseData instanceof Object) {
+      this.data = databaseData;
+    }
+    else this.data = {};
   }
 
   // basic CRUD operation methods
@@ -53,9 +82,17 @@ class DB {
   */
   create(key, value) {
     if (!key || typeof key !== "string") throw ErrorList.invalidKey;
-    if (key in this.objects) throw ErrorList.keyAlreadyExists;
-    this.objects[key] = value;
-    return this.objects[key];
+    if (key in this.data) throw ErrorList.keyAlreadyExists;
+
+    if (this.data instanceof Array) {
+      const obj = {};
+      obj[key] = value;
+      this.data.push(obj);
+    }
+    else this.data[key] = value;
+
+    DBEventEmitter.emit("create");
+    return value;
   }
 
   /*
@@ -68,8 +105,14 @@ class DB {
   */
   read(key) {
     if (!key) throw ErrorList.invalidKey;
-    if (!(key in this.objects)) throw ErrorList.keyNotFound;
-    return this.objects[key];
+    if (!(key in this.data)) throw ErrorList.keyNotFound;
+    
+    if (helpers.isSchema(this.schema)) {
+      return this.data.find(function(object) {
+        return key === object[this.schema.uniqueId];
+      }.bind(this))
+    }
+    else return this.data[key];
   }
 
   /*
@@ -83,9 +126,10 @@ class DB {
   */
   update(key, value) {
     if (!key) throw ErrorList.invalidKey;
-    if (!(key in this.objects)) throw ErrorList.keyNotFound;
-    this.objects[key] = value;
-    return this.objects[key];
+    if (!(key in this.data)) throw ErrorList.keyNotFound;
+    this.data[key] = value;
+    DBEventEmitter.emit("update");
+    return this.data[key];
   }
 
   /*
@@ -96,9 +140,10 @@ class DB {
   * @error code: 3 if the key didn't exist in the database
   */
   delete(key) {
-    if (!(key in this.objects)) throw ErrorList.keyNotFound
-    const deletedValue = this.objects[key];
-    delete this.objects[key];
+    if (!(key in this.data)) throw ErrorList.keyNotFound
+    const deletedValue = this.data[key];
+    delete this.data[key];
+    DBEventEmitter.emit("delete");
     return deletedValue;
   }
 
@@ -107,8 +152,9 @@ class DB {
   }
 
   // standard methods of the database instance
-  export() {
-    fs.writeFileSync(this.fullFilePath, JSON.stringify(this.objects), { encoding: "utf8" });
+  export(prettify = false) {
+    if (Boolean(prettify)) fs.writeFileSync(this.fullFilePath, JSON.stringify(this.data, null, 4), { encoding: "utf8" });
+    else fs.writeFileSync(this.fullFilePath, JSON.stringify(this.data), { encoding: "utf8" });
   }
 
   clear(deleteJSON = true) {
@@ -125,22 +171,42 @@ class DB {
   * @error code: 101 if the JSON string from the file has gone through a parsing error
   * @error code: 102 if the given path is not a string
   */
-  static getDB(filePath) {
+  static getDB(filePath, fileDataSchemaPath = null) {
     if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
+    
+    if (!filePath.endsWith(".json")) filePath += ".json";
 
+    // resolving path for the main JSON file
     const dest = path.resolve(filePath);
-    const fileExtension = path.extname(dest);
+    const dbName = path.basename(dest, ".json");
+    const filePathExtension = path.extname(dest);
 
-    if (fileExtension.toLowerCase() !== ".json") throw ErrorList.invalidFile;
+    if (filePathExtension.toLowerCase() !== ".json") throw ErrorList.invalidFile;
 
+    // resolving path for the JSON schema file
+    let jsonSchemaObject = null;
+    // if there's no given schema path
+    if (!fileDataSchemaPath) {
+      const defaultSchemaPath = `${path.dirname(dest)}/${dbName}.schema.json`;
+      try {
+        const textBuffer = fs.readFileSync(defaultSchemaPath, "utf8");
+        jsonSchemaObject = JSON.parse(textBuffer);
+      }
+      catch {
+        jsonSchemaObject = null;
+      }
+    }
+    // if there's the given schema path
+    else {
+      fs.accessSync(dest, fs.constants.F_OK | fs.constants.R_OK);
+      const textBuffer = fs.readFileSync(fileDataSchemaPath, "utf8");
+      jsonSchemaObject = JSON.parse(textBuffer);
+    }
+    
     // setting the database object now
     const rawJsonData = fs.readFileSync(dest, "utf8");
-    try {
-      const databaseData = JSON.parse(rawJsonData);
-      return new DB(path.basename(dest, ".json"), path.dirname(filePath), databaseData);
-    } catch (error) {
-      throw error;
-    }
+    const databaseData = JSON.parse(rawJsonData);
+    return new DB(dbName, path.dirname(filePath), jsonSchemaObject, databaseData);
   }
 }
 
