@@ -1,5 +1,4 @@
 const Ajv = require('ajv');
-const helpers = require('./helpers');
 
 class SchemaError extends Error {
   constructor(statusCode, description = statusCode) {
@@ -13,18 +12,23 @@ class SchemaError extends Error {
 const SchemaErrorList = {
   invalidType: new SchemaError(200, 'Invalid schema type'),
   schemaMatchFailed: new SchemaError(201, 'Data is invalid according to the schema'),
-  filterFunctionType: new SchemaError(202, 'Filter callback is not a function')
+  filterFunctionType: new SchemaError(202, 'Filter callback is not a function'),
+  duplicateKey: new SchemaError(203, 'Duplicate key'),
+  keyNotFound: new SchemaError(204, 'Key not found'),
 }
 
 class Schema {
-  constructor(object, uniqueIdentifiter = '_id') {
+  constructor(object, uniqueId = null) {
     if (typeof object !== 'object') {
       throw SchemaErrorList.invalidType
     }
     
-    this.validator = new Ajv();
-    this.schema = object;
-    this.data = [];
+    // setting up read-only properties
+    Object.defineProperty(this, "validator", {value: new Ajv(), enumerable: true});
+    Object.defineProperty(this, "structure", {value: object, enumerable: true});
+    Object.defineProperty(this, "uniqueId", {value: uniqueId, enumerable: true});
+
+    this.data = {};
   }
 
   /*
@@ -33,33 +37,7 @@ class Schema {
   * @return {Boolean}
   */
   validate(data) {
-    return this.validator.validate(this.schema, data);
-  }
-
-  /*
-  * Simply adds the data to be passed (but it will have to go through validation first)
-  * @param data {Object}
-  * @return void
-  */
-  add(data) {
-    if (this.validator.validate(this.schema, data)) {
-      this.data.push(data);
-    }
-    else throw {error: SchemaErrorList.schemaMatchFailed, data: data};
-  }
-
-  /*
-  * Deletes the data that has gone through the filter
-  * @param callback {Function} - it's the Array.filter callback
-  * @return {Object} - the deleted data
-  */
-  delete(callback) {
-    if (typeof callback !== 'function') throw SchemaErrorList.filterFunctionType
-    const filteredData = this.data.filter(callback);
-    for (const item of filteredData) {
-      this.data.splice(this.data.indexOf(item.uniqueId), 1);
-    };
-    return filteredData;
+    return this.validator.validate(this.structure, data);
   }
 
   /*
@@ -69,12 +47,27 @@ class Schema {
   */
   filter(callback) {
     if (typeof callback !== 'function') throw SchemaErrorList.filterFunctionType
-    return this.data.filter(callback);
+    const filteredItems = [];
+    
+    // iterating through the data
+    for (const item in this.data) {
+      const member = this.data[item];
+      const passed = callback.call(this, member);
+      
+      if (passed) filteredItems.push(member);
+    }
+
+    return filteredItems;
   }
+}
+
+function isSchema(schemaObject) {
+  return schemaObject && schemaObject instanceof Schema;
 }
 
 module.exports = {
   Schema,
   SchemaError,
   SchemaErrorList,
+  isSchema,
 };
