@@ -4,7 +4,7 @@ const path = require('path');
 const repl = require('repl');
 
 const program = require('commander');
-const db = require('./src/db');
+const jaysonDB = require('./src');
 
 const programName = 'jayson-db';
 
@@ -28,7 +28,7 @@ program
     } else schemaObject = null;
 
     // Creating the database instance
-    const dbInstance = new db.DB(name, options.path, schemaObject);
+    const dbInstance = new jaysonDB.DB.DB(name, options.path, schemaObject);
 
     // Starting the REPL server
     const replServer = repl.start({
@@ -45,7 +45,7 @@ program
   .action((filePath, options) => {
     const resolvedPath = path.resolve(filePath);
     let schemaObject = null;
-    if (options.schema) {
+    if (options.schema && !options.disableSchema) {
       const schemaObjectFilePath = path.resolve(options.schema);
 
       const schemaTextBuffer = fs.readFileSync(schemaObjectFilePath);
@@ -53,11 +53,11 @@ program
     }
 
     // Creating the database instance with the specified JSON file
-    const dbInstance = db.DB.getDB(resolvedPath, schemaObject);
+    const dbInstance = jaysonDB.DB.DB.getDB(resolvedPath, schemaObject);
 
     // Starting the REPL server
     const replServer = repl.start({
-      prompt: `${programName} (${dbInstance.name})`,
+      prompt: `${programName} (${dbInstance.name}): `,
     });
 
     replServer.context.db = dbInstance;
@@ -72,9 +72,9 @@ program
       prompt: `${programName} REPL: `,
     });
 
-    replServer.context.DB = db.DB;
+    replServer.context.DB = jaysonDB.DB.DB;
   });
 
 program.parse(process.argv);
 
-module.exports = db;
+module.exports = jaysonDB.DB;
