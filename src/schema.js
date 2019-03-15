@@ -27,8 +27,6 @@ class Schema {
     Object.defineProperty(this, "validator", {value: new Ajv(), enumerable: true});
     Object.defineProperty(this, "structure", {value: object, enumerable: true});
     Object.defineProperty(this, "uniqueId", {value: uniqueId, enumerable: true});
-
-    this.data = {};
   }
 
   /*
@@ -38,26 +36,6 @@ class Schema {
   */
   validate(data) {
     return this.validator.validate(this.structure, data);
-  }
-
-  /*
-  * It's just a wrapper for the Array.filter function of the schema data
-  * @param callback {Function}
-  * @return {Object} - the data that is filtered
-  */
-  filter(callback) {
-    if (typeof callback !== 'function') throw SchemaErrorList.filterFunctionType
-    const filteredItems = [];
-    
-    // iterating through the data
-    for (const item in this.data) {
-      const member = this.data[item];
-      const passed = callback.call(this, member);
-      
-      if (passed) filteredItems.push(member);
-    }
-
-    return filteredItems;
   }
 }
 

@@ -27,7 +27,7 @@ const ErrorList = {
   keyAlreadyExists: new DBError(2, "Key already exists"),
   keyNotFound: new DBError(3, "Given key does not exist in the database"),
   invalidSchema: new DBError(4, "Invalid schema is given"),
-  schemaMismatch: new DBError(5, "There's a schema present. Use Schema.add() function instead or force it"),
+  schemaMismatch: new DBError(5, "New value doesn't match with the schema"),
   updateValueNeedFunction: new DBError(6, "Update value needs a function if the key value is a function"),
   invalidTypeName: new DBError(50, "Invalid type of the name (it should be a string)"),
   invalidFile: new DBError(100, "Database file is not valid"),
@@ -44,22 +44,23 @@ class DB {
   * @param filePath {String} - the location of the database file (or the export path if it doesn't exist yet)
   * @param data {Object} - the data to be associated with the database
   */
-  constructor(name, filePath = "./", schemaObject = null, databaseData = null, uniqueId = null) {
-    this.data = {};
+  constructor(name, filePath = null, schemaObject = null, databaseData = null, uniqueId = null) {
+    this._data = {};
+    Object.defineProperty(this, 'data', {
+      get: function() { return this._data }
+    })
 
     // checking if given name is a string
     if (typeof name !== "string") throw ErrorList.invalidTypeName;
     Object.defineProperty(this, 'name', {value: name, enumerable: true});
 
     // checking if file path is a string
-    if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
-    Object.defineProperty(this, 'path', {value: path.resolve(filePath), enumerable: true});
+    if (typeof filePath !== "string" && filePath !== null) throw ErrorList.invalidTypePath;
+    Object.defineProperty(this, 'path', {value: path.resolve(filePath || "./"), enumerable: true});
 
     // setting the schema up, if there's any given
     if (schemaObject && typeof schemaObject === 'object') {
-        Object.defineProperty(this, 'schema', {value: new schema.Schema(schemaObject, uniqueId), enumerable: true});
-        this.data = this.schema.data;
-        this.filter = this.schema.filter.bind(this.schema);
+      Object.defineProperty(this, 'schema', {value: new schema.Schema(schemaObject, uniqueId), enumerable: true});
     }
     
     // filling the database with the given data, if there's any
@@ -91,15 +92,15 @@ class DB {
   * @error code: 1 if the key is invalid
   * @error code: 2 if the key is detected in the database
   */
-  create(value, key = (this.dbIsArray) ? String(helpers.objLength(this.data)) : undefined) {
+  create(value, key = (this.dbIsArray) ? String(helpers.objLength(this._data)) : undefined) {
     if (!key || typeof key !== "string") throw ErrorList.invalidKey;
-    if (key in this.data) throw ErrorList.keyAlreadyExists;
+    if (key in this._data) throw ErrorList.keyAlreadyExists;
     
     if (this.schema && schema.isSchema(this.schema)) {
       if (!this.schema.validate(value)) throw ErrorList.schemaMismatch;
     }
 
-    this.data[key] = value;
+    this._data[key] = value;
 
     DBEventEmitter.emit("create");
     return value;
@@ -116,22 +117,22 @@ class DB {
   read(keyValue) {
     if (!keyValue) throw ErrorList.invalidKey;
     if (!(typeof keyValue === 'string' || typeof keyValue === 'function')) throw ErrorList.invalidKey;
-    if (!(keyValue in this.data) && typeof keyValue === 'string') throw ErrorList.keyNotFound;
+    if (!(keyValue in this._data) && typeof keyValue === 'string') throw ErrorList.keyNotFound;
 
     // if it's a string, simply return the record item with the provided key
     if (typeof keyValue === 'string') {
-      return this.data[keyValue];
+      return this._data[keyValue];
     }
     
     // if the 'keyValue' is a function
     const filteredItems = {};
-    for (const record in this.data) {
-      const recordItem = this.data[record];
+    for (const record in this._data) {
+      const recordItem = this._data[record];
       const recordClone = helpers.clone(recordItem); 
 
       const passed = keyValue.call(this, recordClone);
 
-      if (passed) {filteredItems[record] = this.data[record];}
+      if (passed) {filteredItems[record] = this._data[record];}
     }
 
     return filteredItems;
@@ -151,7 +152,7 @@ class DB {
   update(keyValue, updateValue) {
     if (!keyValue) throw ErrorList.invalidKey;
     if (!(typeof keyValue === 'string' || typeof keyValue === 'function')) throw ErrorList.invalidKey;
-    if (!(keyValue in this.data) && typeof keyValue === 'string') throw ErrorList.keyNotFound;
+    if (!(keyValue in this._data) && typeof keyValue === 'string') throw ErrorList.keyNotFound;
 
     // checking if the keyValue is a function
     // if the 'keyValue' is a function, map through them and filter it
@@ -159,10 +160,10 @@ class DB {
       // checking if the updateValue is a function, otherwise throw an error
       if (typeof updateValue === 'function') {
         const filteredItems = {};
-        for (const record in this.data) {
+        for (const record in this._data) {
           // creating a clone of the record just to avoid mutation inside of callback
-          const recordItem = this.data[record];
-          const recordClone = helpers.clone(recordItem);
+          const recordItem = this._data[record];
+          let recordClone = helpers.clone(recordItem);
 
           // executing the callback (that returns a boolean) on the record clone
           const passed = keyValue.call(this, recordClone);
@@ -176,7 +177,7 @@ class DB {
             if (schema.isSchema(this.schema) && !this.schema.validate(recordClone)) continue;
 
             filteredItems[record]["updated"] = recordClone;
-            this.data[record] = recordClone;
+            this._data[record] = recordClone;
           }
         }
 
@@ -188,7 +189,7 @@ class DB {
 
     // this is for the case if the updateValue is simply a string
     // this is just for potential checking against the schema
-    const itemClone = helpers.clone(this.data[keyValue]);
+    let itemClone = helpers.clone(this._data[keyValue]);
 
     // checking if the value is a function
     if (typeof updateValue === 'function') {
@@ -202,7 +203,7 @@ class DB {
     }
     
     // mutate it
-    this.data[keyValue] = itemClone;
+    this._data[keyValue] = itemClone;
     
     DBEventEmitter.emit("update");
     return itemClone;
@@ -216,9 +217,9 @@ class DB {
   * @error code: 3 if the key didn't exist in the database
   */
   delete(key) {
-    if (!(key in this.data)) throw ErrorList.keyNotFound
-    const deletedValue = this.data[key];
-    delete this.data[key];
+    if (!(key in this._data)) throw ErrorList.keyNotFound
+    const deletedValue = this._data[key];
+    delete this._data[key];
     DBEventEmitter.emit("delete");
     return deletedValue;
   }
@@ -233,17 +234,17 @@ class DB {
 
   // standard methods of the database instance
   export(prettify = false, includeSchema = true, asArray = (this.dbIsArray) ? true : false) {
-    let data = this.data;
+    let data = this._data;
     // converting the database instance data as an array, if indicated
     if (asArray) {
       data = [];
-      for (const recordEntry in this.data) {
+      for (const recordEntry in this._data) {
         if (schema.isSchema(this.schema) && this.schema.uniqueId) {
-          const recordObject = helpers.clone(this.data[recordEntry]);
+          const recordObject = helpers.clone(this._data[recordEntry]);
           Object.defineProperty(recordObject, uniqueId, {value: recordEntry});
           data.push(recordObject);
         }
-        else data.push(this.data[recordEntry]);
+        else data.push(this._data[recordEntry]);
       }
     }
 
