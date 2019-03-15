@@ -1,36 +1,102 @@
-# json-database
+# jayson-db
 An easy way to create a JSON database files.
 
 ## Features
+- it's a NoSQL database... in a way, I think
 - easily create a JavaScript object database with JSON files
 - export the database instance back
-- it's a NoSQL database... in a way, I think
+- integrate a schema for your JSON database (with [JSON Schema](https://json-schema.org/understanding-json-schema/))
 
-## Getting started
-The API is really just a [JavaScript class]() which means you start by creating an instance of it.
+### What's it for?
+- To easily create public APIs (at least for me, I would just publish them as a package or something)
+- To make sure your JSON has a bit of consistency
+- Very small-scale and/or personally managed databases
+
+### What's it *not* for?
+- Asynchronous operations such as a web server
+- Complex database structures and compositions
+- 
+
+If you're looking for a better alternative, you can use [SQLite]() or [node-json-db](https://github.com/Belphemur/node-json-db).
+
+<h2 id="getting-started">Getting started</h3>
+First, install it through [npm](http://npmjs.com/):
+
+```sh
+npm i jayson-db
+```
+
+Then just include it as a module to one of your JavaScript files:
 
 ```js
-new DB(dbName, [dbFilePath, dbObjects])
+const jaysonDB = require("jayson-db");
+
+// create an instance of the database
+const dbName = "dogs";
+const db = new jaysonDB(dbName);
+
+db.create("breeds", ["chihuahua", "pug", "bullpit"]);
+db.read("breeds");
+db.update("breeds", function(value) {
+    // update the 'breeds'
+})
+
+// or you can import from an existing JSON
+const jsonLocation = "./cats.json";
+const importedDB = jaysonDB.getDB(jsonLocation);
+```
+
+Aaaaaand voila! You're good to go!
+
+<h2 id="jayson-db-interface">jayson-db Class Interface</h2>
+
+```js
+new jaysonDB(dbName[, dbFilePath[, dbSchema[, dbObjects[, dbPrimaryId]]]]);
 ```
 
 It needs mainly the name of the database but you can add the following data:
-- `dbFilePath` &mdash; The valid path of the JSON file to be exported. It defaults to the current directory when no value was given.
-- `dbObjects` &mdash; The data to be put inside of the database. It could be anything as long as it is an array or an object.
 
-The instance has available methods too. The most basic functions is the CRUD (create, read, update, and read) capability.
-- `DB.create(key, value)` &mdash; Create a new key inside of the `dbObjects`. The key has the same restrictions as a JavaScript object, requiring to be a String (though it doesn't support the key being a [`Number`](https://developer.mozilla.org/en-US/docs/Glossary/Number), however). Returns the value from the newly created key in the database. 
-- `DB.read(key)` &mdash; Returns the value from the specified key if found in the database object.
-- `DB.update(key, value)` &mdash; Updates the value with the specified key if found in the database. Also returns the specified value.
-- `DB.delete(key)` &mdash; Simply deletes the key if found in the database. Returns the value of the deleted key.
+- `dbFilePath` &mdash; The valid path of the JSON file to be exported. It defaults to the current directory when no value (`null`) was given.
+- `dbSchema` &mdash; An object that describes the schema compliant to the [JSON Schema spec (Draft 7)](https://json-schema.org/understanding-json-schema/). You can visit the link to get a grasp on how to declare those or you could continue to the [JSON Schema section](#json-schema) to get a very basic grasp before you continue to the link.
+- `dbObjects` &mdash; The data to be put inside of the database. It could be anything as long as it is an array or an object (in other words, a valid JSON object).
+- `dbPrimaryId` &mdash; The name of the primary ID key to be attached in each of the record. By default, it doesn't have any.
 
-There's also some methods available for each database instance:
-- `DB.export()` &mdash; Simply exports it into a JSON and sends it into the path as specified from the `dbFilePath`.
-- `DB.clear(deleteDB)` &mdash; Empties the JSON. You can also specify to delete the JSON in the file system if you provided a truthy value. 
+<h2 id="methods-and-properties">Methods and properties</h3>
 
-There's also an easy method for setting a JSON database with this mini-library.
-- `DB.getDB(filePath)` &mdash; Simply gets the JSON file into a DB instance.
+You can view the available methods and properties of the Jayson DB instance in this [documentation](./docs/api.md).
 
-## CLI program
+<h2 id="json-schema">JSON Schema</h2>
+Usually in a database, you would expect to have some structure within your data. That's what schemas are mainly for.
+
+You could integrate a schema for the database through the following methods:
+
+<h3 id="db-class-constructor">DB Class Constructor</h3>
+
+```js
+const jaysonDB = require("jayson-db");
+
+// ...
+const name = "jayson-db-sample";
+const path = "./";
+const schema = {type: "number"};
+
+const db = new jaysonDB(name, path, schema);
+```
+
+<h3 id="db-getdb-method"><code>DB.getDB()</code></h3>
+
+```js
+const jaysonDB = require("jayson-db");
+
+// ...
+const jsonLocation = "dogs.json";
+const jsonSchemaLocation = "dogs.schema.json";
+const db = jaysonDB.getDB("<JSON_LOCATION>", "<JSON_SCHEMA_LOCATION>");
+```
+
+This time, it needs a JSON file of the schema. When 
+
+<h2 id="cli-program">CLI program</h2>
 You could also use the module as a CLI program. To use it, simply refer to it by the name of the package (jayson-db).
 
 If you install the package locally, you can call it by `npx <PACKAGE_NAME>` in the shell or from the `package.json`.
