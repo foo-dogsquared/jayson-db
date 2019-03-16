@@ -98,15 +98,16 @@ AUTHOR'S NOTE:
 
 ## Other functions
 
-### `export(prettify, includeSchema, asArray)`
+### `export(prettify, includeSchema)`
 
 Parameter | Type | Description
 --- | --- | --- |
 `prettify` | `Boolean` | If given a truthy value, it will pretty print and export the JSON, making it more human-readable. Otherwise, it will export the JSON minified. It is set to `true` by default.
-`includeSchema` | `Boolean` | Specifies whether the schema should be saved along with the data. By default, it is saved as `<DATABASE_NAME>.schema.json` in the same directory as indicated by `<DATABASE_PATH>` (`DBInstance.path`).
-`asArray` | `Boolean` | Indicates whether the data should be saved as an array.
+`includeSchema` | `Boolean` | Specifies whether the schema should be saved along with the data. By default, it is set to `true` and it will be saved as `<DATABASE_NAME>.schema.json` in the same directory as indicated by `<DATABASE_PATH>` (`DBInstance.path`).
 
-It's a void function &ndash; it has no return value.
+Its return value will be different depending whether you have set a schema or not. If you have no schema set to your database, it is a void function.
+
+If you have a schema associated with the database, each record will have to be validated first before being added into the resulting JSON file. Furthermore, the return value will be an object of records that didn't passed the schema validation.
 
 ### `clear()`
 Simply clears the database instance. Also returns the entire database before the deletion happens.

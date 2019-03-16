@@ -9,15 +9,15 @@ An easy way to create a JSON database files.
 
 ### What's it for?
 - To easily create public APIs (at least for me, I would just publish them as a package or something)
-- To make sure your JSON has a bit of consistency
+- To make sure your data inside of the JSON files consistent
 - Very small-scale and/or personally managed databases
 
 ### What's it *not* for?
 - Asynchronous operations such as a web server
 - Complex database structures and compositions
-- Holding out large data
+- Holding out very large data
 
-If you're looking for a better alternative, you can use [SQLite]() or [node-json-db](https://github.com/Belphemur/node-json-db).
+If you're looking for a better alternative, you can use [SQLite](https://www.sqlite.org/) or [node-json-db](https://github.com/Belphemur/node-json-db).
 
 ## Getting started
 
@@ -47,7 +47,7 @@ const jsonLocation = "./cats.json";
 const importedDB = jaysonDB.getDB(jsonLocation);
 ```
 
-Aaaaaand voila! You're good to go!
+Aaaaaand voila! You're good to go! You can also use the [CLI program](#cli-program) to quickly start using the module as well.
 
 ## jayson-db Class Interface
 
@@ -69,12 +69,18 @@ Property | Type | Description
 
 You can view the available methods and properties of the Jayson DB instance in this [documentation](./docs/api.md).
 
-## CLI program
+<h2 id="cli-program">CLI program</h2>
 You could also use the module as a CLI program. To use it, simply refer to it by the name of the package (jayson-db).
 
 If you install the package locally, you can call it by `npx <PACKAGE_NAME>` in the shell or from the `package.json`.
 
+### `create`
 There are a couple of commands to execute with. First, you could quickly create a database instance with `create` and supplying it with a name parameter (`jayson-db create <DATABASE_NAME>`). Then you'll be entered into a [Node REPL](https://nodejs.org/api/repl.html) (as if you entered `node` in the shell) with the database instance as `db`.
+
+A couple of flags and option include:
+
+- `-p` / `--path` &mdash; The export location of the JSON file. Defaults to current directory.
+- `-s` / `--schema` &mdash; The import location of the schema file. Defaults to having no schema.
 
 ```sh
 jayson-db (<DATABASE_NAME>): db
@@ -83,6 +89,20 @@ DB { name: '<DATABASE_NAME>', path: '/somewhere/in/the/fs', objects: {} }
 jayson-db (<DATABASE_NAME>):
 ```
 
+### `get`
+You can also quickly get your already exported JSON files with the `get` command. All it needs is a location of the JSON file and `jayson-db` will create a `jayson-db` instance out of the JSON file. It'll also get the schema file (`<JSON_NAME>.schema.json`) automatically, if it detects one.
+
+You can also explicitly tell the location of the schema file with the `-s` or `--schema` option.
+
+Like the `create` command, if it success to create an instance. You enter into a Node REPL with the added context of the resulted instance as `db`.
+
+```sh
+$ jayson-db get ./<JSON_NAME>.json --schema ./path/to/schema.json
+jayson-db (<JSON_NAME>): db
+# the database instance object
+```
+
+### `repl`
 You could also have a quick test of the library with the `repl` command which will make you enter into a REPL interface included with the DB class object as `DB`.
 
 ```sh
