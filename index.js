@@ -10,7 +10,7 @@ const programName = 'jayson-db';
 
 // CLI tool program
 program
-  .version('0.1.0', '-v, --version');
+  .version('0.2.1', '-v, --version');
 
 // 'create' function of the CLI tool
 program
@@ -77,4 +77,4 @@ program
 
 program.parse(process.argv);
 
-module.exports = jaysonDB.DB;
+module.exports = jaysonDB.DB.DB;
