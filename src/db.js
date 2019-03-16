@@ -29,24 +29,24 @@ const ErrorList = {
   keyNotFound: new DBError(3, "Given key does not exist in the database"),
   invalidSchema: new DBError(4, "Invalid schema is given"),
   schemaMismatch: new DBError(5, "New value does not match with the schema"),
-  updateValueNeedFunction: new DBError(6, "Update value needs a function if the key value is a function"),
-  invalidTypeName: new DBError(50, "Invalid type of the name (it should be a string)"),
+  updateValueNeedFunction: new TypeError("Update value needs a function if the key value is a function"),
+  invalidTypeName: new TypeError("Invalid type of the name (it should be a string)"),
   invalidFile: new DBError(100, "Database file is not valid"),
   invalidJson: new DBError(101, "Invalid JSON from parsing"),
-  invalidTypePath: new DBError(102, "Invalid type of the path (it should be a string)"),
+  invalidTypePath: new TypeError("Invalid type of the path (it should be a string)"),
 };
 
 class DB {
-  /* 
+  /** 
   * Represent a JSON DB object
   * @class DB
   * @constructor
   * @param name {String} - the name of the database (and the file to be exported)
   * @param filePath {String} - the location of the database file (or the export path if it doesn't exist yet)
   * @param data {Object} - the data to be associated with the database
-  */
+  **/
   constructor(name, options = { path: null, schema: null, data: null, isArray: false }) {
-    Object.defineProperty(this, '_data', {value: {}, enumerable: false, configurable: true, writable: true});
+    Object.defineProperty(this, '_data', {value: {}, enumerable: false, configurable: true, writable: false});
     Object.defineProperty(this, 'data', {
       enumerable: true,
       configurable: false,
@@ -58,9 +58,9 @@ class DB {
     Object.defineProperty(this, 'name', {value: name, enumerable: true});
 
     // checking if file path is a string
-    const filePath = options.path;
-    if (typeof filePath !== "string" && filePath !== null) throw ErrorList.invalidTypePath;
-    Object.defineProperty(this, 'path', {value: path.resolve(filePath || "./"), enumerable: true});
+    const filePath = options.path || "./";
+    if (typeof filePath !== "string") throw ErrorList.invalidTypePath;
+    Object.defineProperty(this, 'path', {value: path.resolve(filePath), enumerable: true});
 
     // setting the schema up, if there's any given
     const schemaObject = options.schema;
@@ -102,7 +102,7 @@ class DB {
       if (!this.schema.validate(value)) throw ErrorList.schemaMismatch;
     }
 
-    this._data[key] = value;
+    Object.defineProperty(this._data, key, {configurable: true, enumerable: true, value: value})
 
     DBEventEmitter.emit("create");
     return value;
@@ -165,7 +165,7 @@ class DB {
             if (schema.isSchema(this.schema) && !this.schema.validate(recordClone)) continue;
 
             filteredItems[record]["updated"] = recordClone;
-            this._data[record] = recordClone;
+            Object.defineProperty(this._data, record, {value: recordClone});
           }
         }
 
@@ -191,7 +191,7 @@ class DB {
     }
     
     // mutate it
-    this._data[keyValue] = itemClone;
+    Object.defineProperty(this._data, keyValue, {value: itemClone});    
     
     DBEventEmitter.emit("update");
     return itemClone;
@@ -231,13 +231,17 @@ class DB {
   // standard methods of the database instance
   export(prettify = true, includeSchema = true) {
     let data = this._data;
+    const invalidRecords = {};
     // converting the database instance data as an array, if indicated
     if (this.isArray) {
       data = [];
       for (const recordEntry in this._data) {
         // if there's a schema and it doesn't validate against it, don't include it
         if (schema.isSchema(this.schema)) {
-          if (!this.schema.validate(this._data[recordEntry])) continue;
+          if (!this.schema.validate(this._data[recordEntry])) {
+            invalidRecords[recordEntry] = this._data[recordEntry];
+            continue;
+          }
         }
         
         data.push(this._data[recordEntry]);
@@ -250,6 +254,8 @@ class DB {
 
     // saving the schema as an associated JSON Schema file
     if (Boolean(includeSchema) && this.schema) fs.writeFileSync(this.fullFileSchemaPath, JSON.stringify(this.schema.structure, null, 4));
+
+    return (schema.isSchema(this.schema)) ? invalidRecords : undefined;
   }
 
   clear() {

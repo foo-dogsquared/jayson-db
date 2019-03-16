@@ -50,7 +50,7 @@ describe('Testing out the database class:', () => {
   });
 });
 
-describe('DB Instance create function', () => {
+describe('DB instance create function', () => {
   test("It should accept parameter 'key' with String type correctly", () => {
     const dbInstance = new db.DB('test');
     expect(dbInstance.create('foo-dogsquared', 'name')).toBe('foo-dogsquared');
@@ -72,7 +72,7 @@ describe('DB Instance create function', () => {
   });
 });
 
-describe("DB Instance read function", () => {
+describe("DB instance read function", () => {
   test("It should accept a key that is a string", () => {
     const dbInstance = new db.DB('test');
     const key = "key";
@@ -175,7 +175,7 @@ describe("DB instance update function", () => {
   })
 })
 
-describe('DB Instance export function', () => {
+describe('DB instance export function', () => {
   test('It should properly export the JSON file if directory exists', () => {
     const dbInstance = new db.DB('test', outputDir);
 
@@ -197,15 +197,15 @@ describe('DB Instance export function', () => {
   });
 });
 
-describe('DB Instance clear file function', () => {
-  test('It should properly clear the file if it exists', () => {
+describe('DB instance clear function', () => {
+  test('It should properly return the value before it wipes out the database', () => {
     const dbInstance = new db.DB('test', outputDir);
-    expect(() => dbInstance.clear()).not.toThrow();
-  });
+    const value = 2345;
+    const key = "dogs";
 
-  test("It should properly throw an error if the file doesn't exists", () => {
-    const dbInstance = new db.DB('test', nonExistentDir);
-    expect(() => dbInstance.clear()).toThrow();
+    dbInstance.create(value, key);
+
+    expect(dbInstance.clear()).toEqual(expect.any(Object));
   });
 });
 
