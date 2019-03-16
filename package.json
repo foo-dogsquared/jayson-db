@@ -1,6 +1,6 @@
 {
   "name": "jayson-db",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An easy way to create JSON database files.",
   "main": "index.js",
   "dependencies": {
@@ -17,7 +17,7 @@
   },
   "files": [
     "src/**/*",
-    "docs/**/*", 
+    "docs/**/*",
     "index.js",
     "LICENSE",
     "README.md"
