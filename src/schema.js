@@ -26,14 +26,14 @@ class Schema {
     // setting up read-only properties
     Object.defineProperty(this, "validator", {value: new Ajv(), enumerable: true});
     Object.defineProperty(this, "structure", {value: object, enumerable: true});
-    Object.defineProperty(this, "uniqueId", {value: uniqueId, enumerable: true});
+    Object.defineProperty(this, "uniqueId", {value: uniqueId || "_id", enumerable: true});
   }
 
-  /*
+  /**
   * Simply validates the data to be passed with the schema
   * @param data {Object}
   * @return {Boolean}
-  */
+  **/
   validate(data) {
     return this.validator.validate(this.structure, data);
   }
