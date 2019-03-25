@@ -27,8 +27,13 @@ program
       schemaObject = JSON.parse(fileBuffer);
     } else schemaObject = null;
 
+    const instanceOptions = {
+      path: options.path,
+      schema: schemaObject,
+    };
+
     // Creating the database instance
-    const dbInstance = new jaysonDB.DB.DB(name, options.path, schemaObject);
+    const dbInstance = new jaysonDB.DB.DB(name, instanceOptions);
 
     // Starting the REPL server
     const replServer = repl.start({
