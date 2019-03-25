@@ -10,7 +10,7 @@ const programName = 'jayson-db';
 
 // CLI tool program
 program
-  .version('0.1.0', '-v, --version');
+  .version('0.2.1', '-v, --version');
 
 // 'create' function of the CLI tool
 program
@@ -27,8 +27,13 @@ program
       schemaObject = JSON.parse(fileBuffer);
     } else schemaObject = null;
 
+    const instanceOptions = {
+      path: options.path,
+      schema: schemaObject,
+    };
+
     // Creating the database instance
-    const dbInstance = new jaysonDB.DB.DB(name, options.path, schemaObject);
+    const dbInstance = new jaysonDB.DB.DB(name, instanceOptions);
 
     // Starting the REPL server
     const replServer = repl.start({
@@ -77,4 +82,4 @@ program
 
 program.parse(process.argv);
 
-module.exports = jaysonDB.DB;
+module.exports = jaysonDB.DB.DB;

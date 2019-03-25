@@ -10,7 +10,7 @@ class SchemaError extends Error {
 }
 
 const SchemaErrorList = {
-  invalidType: new SchemaError(200, 'Invalid schema type'),
+  invalidType: new TypeError('Invalid schema type (it should be a valid JSON)'),
   schemaMatchFailed: new SchemaError(201, 'Data is invalid according to the schema'),
   filterFunctionType: new SchemaError(202, 'Filter callback is not a function'),
   duplicateKey: new SchemaError(203, 'Duplicate key'),
@@ -18,15 +18,14 @@ const SchemaErrorList = {
 }
 
 class Schema {
-  constructor(object, uniqueId = null) {
-    if (typeof object !== 'object') {
-      throw SchemaErrorList.invalidType
-    }
+  constructor(...schemaObjects) {
+    if (typeof schemaObjects !== 'object') throw SchemaErrorList.invalidType
+    if (!(schemaObjects instanceof Object)) throw SchemaErrorList.invalidType
     
     // setting up read-only properties
-    Object.defineProperty(this, "validator", {value: new Ajv(), enumerable: true});
-    Object.defineProperty(this, "structure", {value: object, enumerable: true});
-    Object.defineProperty(this, "uniqueId", {value: uniqueId || "_id", enumerable: true});
+    Object.defineProperty(this, "ajv", {value: new Ajv({ schemas: schemaObjects}), enumerable: true});
+    Object.defineProperty(this, "validator", {value: this.ajv.compile()})
+    Object.defineProperty(this, "structure", {value: schemaObjects, enumerable: true});
   }
 
   /**

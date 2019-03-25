@@ -2,6 +2,10 @@
 # Methods and properties
 Each instance of jayson-db has the following methods and properties:
 
+- [Properties](#properties)
+- [CRUD functions](#crud-functions)
+- [Static methods](#static-methods)
+
 ## Properties
 
 Name | Type | Notes | Description

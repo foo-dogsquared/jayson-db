@@ -208,14 +208,14 @@ class DB {
     if (!keyValue) throw ErrorList.invalidKey;
     if (!(typeof keyValue === 'string' || typeof keyValue === 'function')) throw ErrorList.invalidKey;
     if (!(keyValue in this._data) && typeof keyValue === 'string') throw ErrorList.keyNotFound
-    
+
     const status = helpers.detectPredicateOrString(keyValue, this._data);
 
     // deleting the filtered data
     for (const filteredItems in status.data) {
       delete this._data[filteredItems];
     }
-    
+
     DBEventEmitter.emit("delete");
     return status.data;
   }
@@ -260,7 +260,7 @@ class DB {
 
   clear() {
     const clonedData = helpers.clone(this._data);
-    this._data = {};
+    Object.defineProperty(this, "_data", {value: {}});
 
     return clonedData;
   }
