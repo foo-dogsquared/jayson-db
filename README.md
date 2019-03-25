@@ -1,5 +1,13 @@
 # jayson-db
+[![first-timers-only](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
+
 An easy way to create a JSON database files.
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Methods and properties](#methods-and-properties)
+- [Schema](#schema)
+- [CLI program](#cli-program)
 
 ## Features
 - It's a NoSQL database... in a way, I think
@@ -66,10 +74,12 @@ Property | Type | Description
 `isArray` | `Boolean` | Indicates the JSON will be an object or an array. Though, if the `data` property is present, this option is useless. This is only useful if you are starting with no data at all.
 
 ## [Methods and properties](./docs/api.md)
-
 You can view the available methods and properties of the Jayson DB instance in this [documentation](./docs/api.md).
 
-<h2 id="cli-program">CLI program</h2>
+## [Schema](./docs/json-schema.md)
+You could take a little exercise or a tutorial about JSON Schema right [over here](./docs/json-schema.md). Though, you can also go straight into the [official JSON Schema spec website](http://json-schema.org/) and learn about it. They provide a "Quickstart" section for those who are not truly familiar what's it about.
+
+## CLI program
 You could also use the module as a CLI program. To use it, simply refer to it by the name of the package (jayson-db).
 
 If you install the package locally, you can call it by `npx <PACKAGE_NAME>` in the shell or from the `package.json`.
