@@ -7,7 +7,7 @@
     "ajv": "6.10.0",
     "commander": "2.19.0"
   },
-  "bin": "./index.js",
+  "bin": "./bin/index",
   "devDependencies": {
     "eslint": "5.15.1",
     "eslint-config-airbnb-base": "13.1.0",
